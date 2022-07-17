@@ -21,10 +21,14 @@ unsigned char DIC_errno;
 const char *DIC_error(void)
 {
 	switch(DIC_errno) {
+		case DIC_RDERR:
+			return "Reading file failed";
 		case DIC_WRERR:
 			return "Writing file failed";
 		case DIC_HLPERR:
 			return "Please run DIC_add_chunk() - No chunks found";
+		case DIC_BADERR:
+			return "DIC signature not found";
 		case DIC_MEMERR:
 			return "Out of memory";
 		case DIC_OKERR:
@@ -110,6 +114,90 @@ void DIC_add_s16(dicsnd_t *snd, int count, ...)
 	snd->chunks[snd->nchunks - 1].s16 = s16;
 }
 
+/* Load DIC sound from file.
+ */
+dicsnd_t *DIC_load(const char *filename)
+{
+	dicsnd_t *snd;
+	FILE *fp;
+
+	/* Open sound file. */
+	fp = fopen(filename, "rb");
+	if(!fp) {
+		DIC_errno = DIC_RDERR;
+		return NULL;
+	}
+
+	/* Initialize DIC sound. */
+	snd = DIC_init();
+	if(!snd) {
+		DIC_errno = DIC_MEMERR;
+		fclose(fp);
+		return NULL;
+	}
+
+	/* Get header from file. */
+	if(fread(snd, sizeof(dicsnd_t) - sizeof(void*), 1, fp) != 1) {
+		DIC_errno = DIC_RDERR;
+		DIC_free(snd);
+		fclose(fp);
+		return NULL;
+	}
+
+	/* Check header for validation. */
+	if(memcmp(snd->tag, "PRS", 4) != 0) {
+		DIC_errno = DIC_BADERR;
+		DIC_free(snd);
+		fclose(fp);
+		return NULL;
+	}
+
+	/* Add all chunks to snd file. */
+	snd->chunks = (dicchk_t *)calloc(snd->nchunks, sizeof(dicchk_t));
+	if(!snd->chunks) {
+		DIC_errno = DIC_MEMERR;
+		DIC_free(snd);
+		fclose(fp);
+		return NULL;
+	}
+
+	/* Loop through and add all data. */
+	for(unsigned int i = 0; i < snd->nchunks; i++) {
+		if(fread(snd->chunks[i].tag, sizeof(unsigned char), 4, fp) != 4) {
+			DIC_errno = DIC_RDERR;
+			DIC_free(snd);
+			fclose(fp);
+			return NULL;
+		}
+
+		if(fread(&snd->chunks[i].count, sizeof(unsigned int), 1, fp) != 1) {
+			DIC_errno = DIC_RDERR;
+			DIC_free(snd);
+			fclose(fp);
+			return NULL;
+		}
+
+		snd->chunks[i].s16 = (short int *)calloc(snd->chunks[i].count, sizeof(short int));
+		if(!snd->chunks[i].s16) {
+			DIC_errno = DIC_MEMERR;
+			DIC_free(snd);
+			fclose(fp);
+			return NULL;
+		}
+
+		if(fread(snd->chunks[i].s16, sizeof(short int), snd->chunks[i].count, fp) != snd->chunks[i].count) {
+			DIC_errno = DIC_RDERR;
+			DIC_free(snd);
+			fclose(fp);
+			return NULL;
+		}
+	}
+
+	fclose(fp);
+	DIC_errno = DIC_OKERR;
+	return snd;
+}
+
 /* Write DIC sound to file.
  */
 void DIC_write(dicsnd_t *snd, const char *filename)
@@ -152,8 +240,8 @@ void DIC_write(dicsnd_t *snd, const char *filename)
 		}
 	}
 
-	DIC_errno = DIC_OKERR;
 	fclose(fp);
+	DIC_errno = DIC_OKERR;
 }
 
 /* Print all info about the DIC sound.
@@ -171,9 +259,10 @@ void DIC_print(dicsnd_t *snd)
 
 /* Generating a square wave form.
  */
-short int *DIC_square_wave(size_t sample_count, int freq)
+short int *DIC_square_wave(short unsigned int sample_rate,
+	size_t sample_count, int freq)
 {
-	int full_cycle = (float)sample_count / (float)freq;
+	int full_cycle = (float)sample_rate / (float)freq;
 	int half_cycle = full_cycle / 2.0f;
 	short int *samples;
 	int cycle_index;

@@ -6,12 +6,23 @@ PROJECT=$(shell basename $$(pwd))
 VERSION=1.0
 TARBALL=$(PROJECT)-$(VERSION).tar.xz
 
-SOURCE1=$(wildcard *.c)
+SOURCE1=\
+	dicsnd.c\
+	sample.c
+
 OBJECT1=$(SOURCE1:%.c=%.c.o)
-TARGET1=$(PROJECT)
+TARGET1=sample
+
+SOURCE2=\
+	dicsnd.c\
+	play.c
+
+OBJECT2=$(SOURCE2:%.c=%.c.o)
+TARGET2=play
 
 TARGETS=\
-	$(TARGET1)
+	$(TARGET1)\
+	$(TARGET2)
 
 .PHONY: all clean dist
 all: $(TARGETS)
@@ -20,6 +31,9 @@ all: $(TARGETS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(TARGET1): $(OBJECT1)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(TARGET2): $(OBJECT2)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:

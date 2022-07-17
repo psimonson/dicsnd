@@ -22,7 +22,8 @@ typedef struct dicsnd {
 	dicchk_t *chunks;
 } dicsnd_t;
 
-enum { DIC_OKERR, DIC_MEMERR, DIC_HLPERR, DIC_WRERR, DIC_UNKERR };
+enum { DIC_OKERR, DIC_MEMERR, DIC_HLPERR, DIC_RDERR, DIC_WRERR,
+       DIC_BADERR, DIC_UNKERR };
 extern unsigned char DIC_errno;
 
 /* Errors for DIC music. */
@@ -40,6 +41,9 @@ void DIC_add_chunk(dicsnd_t *snd);
 /* Add data to chunk. */
 void DIC_add_s16(dicsnd_t *snd, int count, ...);
 
+/* Load DIC sound from file off disk. */
+dicsnd_t *DIC_load(const char *filename);
+
 /* Write DIC sound to file on disk. */
 void DIC_write(dicsnd_t *snd, const char *filename);
 
@@ -47,6 +51,7 @@ void DIC_write(dicsnd_t *snd, const char *filename);
 void DIC_print(dicsnd_t *snd);
 
 /* Generate square wave form. */
-short int *DIC_square_wave(size_t sample_count, int freq);
+short int *DIC_square_wave(short unsigned int sample_rate,
+	size_t sample_count, int freq);
 
 #endif
