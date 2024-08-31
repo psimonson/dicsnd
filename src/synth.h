@@ -11,9 +11,17 @@ typedef enum {
     WAVE_SQUARE,
     WAVE_TRIANGLE,
     WAVE_SAWTOOTH,
+	WAVE_PLUCK,
     WAVE_NOISE,
     WAVE_SILENCE
 } WaveType;
+
+typedef struct {
+    float *buffer;
+    size_t buffer_size;
+    size_t position;
+    float decay;
+} PluckString;
 
 typedef struct {
     float attack;    // in seconds
@@ -45,6 +53,8 @@ typedef struct {
     size_t track_count;
     float duration; // in seconds
 } Song;
+
+void free_pluck_string();
 
 Song* create_song(size_t track_count, float duration);
 void add_track(Song* song, size_t track_index, Note* notes, size_t note_count);

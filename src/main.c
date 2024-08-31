@@ -5,7 +5,7 @@ int main() {
     Song* song = create_song(4, 20.0f);
 
     // Create instruments
-    Instrument guitar = { WAVE_SQUARE, { 0.1f, 1.0f, 0.7f, 0.2f } };  // Low E string
+    Instrument guitar = { WAVE_PLUCK, { 0.1f, 1.0f, 0.7f, 0.2f } };  // Low E string
     Instrument drum = { WAVE_SINE, { 0.1f, 0.2f, 0.3f, 0.2f } };      // Low frequency sine wave
     Instrument cymbal = { WAVE_NOISE, { 0.001f, 0.2f, 0.6f, 0.3f } }; // High-frequency noise
     Instrument piano = { WAVE_SINE, { 0.01f, 0.5f, 0.5f, 0.3f } };   // Middle C
@@ -61,6 +61,7 @@ int main() {
     // Free memory
     free_song(song);
     free_song(loaded_song);
+	free_pluck_string();
 
     return 0;
 }

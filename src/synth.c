@@ -1,12 +1,53 @@
 #include "synth.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include <string.h>
 
 #define TWO_PI 6.283185307179586476925286766559
 
+static bool initialized = 0;
+static PluckString pluck;
+
+void init_pluck_string(float frequency, float decay) {
+	if (initialized) return;
+
+    pluck.buffer_size = (size_t)(SAMPLE_RATE / frequency);
+    pluck.buffer = (float*)malloc(pluck.buffer_size * sizeof(float));
+    pluck.position = 0;
+    pluck.decay = decay;
+
+    for (size_t i = 0; i < pluck.buffer_size; ++i) {
+        pluck.buffer[i] = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+    }
+}
+
+float generate_pluck_sample() {
+    float current_sample = pluck.buffer[pluck.position];
+    float next_sample = pluck.buffer[(pluck.position + 1) % pluck.buffer_size];
+    float new_sample = (current_sample + next_sample) * 0.5f * pluck.decay;
+
+    pluck.buffer[pluck.position] = new_sample;
+    pluck.position = (pluck.position + 1) % pluck.buffer_size;
+
+    return current_sample;
+}
+
+void free_pluck_string() {
+	if (initialized) {
+		initialized = 0;
+	}
+
+    free(pluck.buffer);
+}
+
 static float generate_wave_sample(WaveType wave_type, Note *note, float time) {
+	if (!initialized) {
+		init_pluck_string(note->frequency, 0.99f);
+		initialized = 1;
+	}
+
 	if (note->amplitude > 5.0f) { note->amplitude = 5.0f; }
 	else if (note->amplitude < 0.0f) { note->amplitude = 0.0f; }
 
@@ -21,6 +62,8 @@ static float generate_wave_sample(WaveType wave_type, Note *note, float time) {
             return (2.0f / M_PI) * (note->frequency * M_PI * fmodf(time, 1.0f / note->frequency) - (M_PI / 2.0f));
         case WAVE_NOISE:
             return ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+		case WAVE_PLUCK:
+			return generate_pluck_sample();
         case WAVE_SILENCE:
             return 0.0f;
         default:
